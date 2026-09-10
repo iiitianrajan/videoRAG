@@ -9,3 +9,14 @@ wheels/
 # Virtual environments
 .venv
 .env
+
+# Downloaded files
+downloades/
+utils/downloads/
+
+# IDE
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db

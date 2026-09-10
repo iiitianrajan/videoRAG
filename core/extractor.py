@@ -1,6 +1,7 @@
 #Actionableitems , decision , questions 
 
 from langchain_mistralai import ChatMistralAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
@@ -9,6 +10,13 @@ import os
 
 def get_llm():
     return ChatMistralAI(model = "mistral-small-latest", mistral_api_key = os.getenv("MISTRAL_API_KEY"),temperature=0.2)
+
+# def get_llm():
+#     return ChatGoogleGenerativeAI(
+#         model="gemini-2.5-flash",
+#         google_api_key=os.getenv("GOOGLE_API_KEY"),
+#         temperature=0.2
+#     )
 
 
 
