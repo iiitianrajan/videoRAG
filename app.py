@@ -1,7 +1,8 @@
 import streamlit as st
 import time
+from html import escape
 from dotenv import load_dotenv
-from utils.audio_processor import process_input
+from utils.audio_processor import cleanup_audio_files, process_input
 from core.transcriber import transcribe_all
 from core.summarizer import summarize, generate_title
 from core.extractor import extract_action_items, extract_key_decisions, extract_questions
@@ -153,7 +154,8 @@ h1, h2, h3, h4 {
     box-shadow: 0 0 0 2px var(--accent-soft) !important;
 }
 
-.stButton > button {
+.stButton > button,
+.stFormSubmitButton button {
     background: var(--accent) !important;
     color: #ffffff !important;
     border: none !important;
@@ -164,7 +166,20 @@ h1, h2, h3, h4 {
     padding: 0.55rem 1.3rem !important;
     transition: opacity 0.15s !important;
 }
-.stButton > button:hover { opacity: 0.85 !important; }
+.stButton > button:hover,
+.stFormSubmitButton button:hover {
+    background: #16304f !important;
+    color: #ffffff !important;
+    opacity: 1 !important;
+}
+
+/* Form submit controls use a different Streamlit DOM structure. */
+.stFormSubmitButton button {
+    background: #1f3a5f !important;
+    color: #ffffff !important;
+    border: 1px solid #1f3a5f !important;
+    min-height: 2.5rem !important;
+}
 
 .stButton > button[kind="secondary"] {
     background: var(--surface) !important;
@@ -279,6 +294,15 @@ def render_status_list(steps: dict):
         </div>""")
     st.markdown("".join(rows), unsafe_allow_html=True)
 
+def safe_html(value) -> str:
+    return escape(str(value)).replace("\n", "<br>")
+
+def render_response_section(label: str, content: str) -> None:
+    """Render model output in a readable, safely escaped Streamlit section."""
+    with st.container(border=True):
+        st.caption(label.upper())
+        st.markdown(content)
+
 # ─── Sidebar ─────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown('<div class="wordmark">Meeting Intelligence</div>', unsafe_allow_html=True)
@@ -317,21 +341,41 @@ if run_btn:
         st.session_state.chat_history = []
         st.session_state.pipeline_steps = {}
 
-        progress_placeholder = st.empty()
+        pipeline_status = st.status("Preparing your meeting analysis…", expanded=True)
+        progress_bar = st.progress(0, text="Preparing pipeline…")
 
         def update_step(key, state):
             st.session_state.pipeline_steps[key] = state
+            label = dict(STEP_LABELS)[key]
+            completed_steps = sum(
+                step_state == "done" for step_state in st.session_state.pipeline_steps.values()
+            )
+            if state == "active":
+                pipeline_status.update(
+                    label=f"{label} in progress…",
+                    state="running",
+                    expanded=True,
+                )
+                progress_bar.progress(
+                    int(completed_steps / len(STEP_LABELS) * 100),
+                    text=f"{label} in progress…",
+                )
+            elif state == "done":
+                progress_bar.progress(
+                    int(completed_steps / len(STEP_LABELS) * 100),
+                    text=f"{label} complete",
+                )
 
         try:
-            with progress_placeholder.container():
-                st.info("Processing — see the sidebar for pipeline status.")
-
             update_step("audio", "active")
             chunks = process_input(source)
             update_step("audio", "done")
 
             update_step("transcript", "active")
-            transcript = transcribe_all(chunks, language)
+            try:
+                transcript = transcribe_all(chunks, language)
+            finally:
+                cleanup_audio_files(chunks)
             update_step("transcript", "done")
 
             update_step("title", "active")
@@ -362,16 +406,21 @@ if run_btn:
                 "rag_chain": rag_chain,
             }
             st.session_state.pipeline_done = True
-            progress_placeholder.success("Analysis complete.")
+            progress_bar.progress(100, text="Analysis complete")
+            pipeline_status.update(label="Analysis complete", state="complete", expanded=False)
             time.sleep(0.5)
-            progress_placeholder.empty()
             st.rerun()
 
         except Exception as e:
             for k, _ in STEP_LABELS:
                 if st.session_state.pipeline_steps.get(k) == "active":
                     st.session_state.pipeline_steps[k] = "pending"
-            progress_placeholder.error(f"Something went wrong: {e}")
+            pipeline_status.update(
+                label="Analysis could not be completed",
+                state="error",
+                expanded=True,
+            )
+            st.error(f"Something went wrong: {e}")
 
 # ── Results ────────────────────────────────────────────────────────────────
 if st.session_state.result:
@@ -380,46 +429,30 @@ if st.session_state.result:
     st.markdown(f"""
     <div class="doc-title-block">
         <div class="doc-title-label">Session</div>
-        <div class="doc-title">{r['title']}</div>
+        <div class="doc-title">{safe_html(r['title'])}</div>
     </div>""", unsafe_allow_html=True)
 
     col1, col2 = st.columns([3, 2], gap="large")
 
     with col1:
-        st.markdown(f"""
-        <div class="section">
-            <div class="section-label">Summary</div>
-            <div class="section-content">{r['summary']}</div>
-        </div>""", unsafe_allow_html=True)
+        render_response_section("Summary", r["summary"])
 
     with col2:
         with st.expander("Full transcript", expanded=False):
-            st.markdown(f'<div class="section-content sans">{r["transcript"]}</div>', unsafe_allow_html=True)
+            st.markdown(r["transcript"])
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns(3, gap="large")
+    c1, c2 = st.columns(2, gap="large")
 
     with c1:
-        st.markdown(f"""
-        <div class="section">
-            <div class="section-label">Action items</div>
-            <div class="section-content sans">{r['action_items']}</div>
-        </div>""", unsafe_allow_html=True)
+        render_response_section("Action items", r["action_items"])
 
     with c2:
-        st.markdown(f"""
-        <div class="section">
-            <div class="section-label">Key decisions</div>
-            <div class="section-content sans">{r['key_decisions']}</div>
-        </div>""", unsafe_allow_html=True)
+        render_response_section("Key decisions", r["key_decisions"])
 
-    with c3:
-        st.markdown(f"""
-        <div class="section">
-            <div class="section-label">Open questions</div>
-            <div class="section-content sans">{r['open_questions']}</div>
-        </div>""", unsafe_allow_html=True)
+    with st.expander("Open questions", expanded=False):
+        st.markdown(r["open_questions"])
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
@@ -427,37 +460,25 @@ if st.session_state.result:
     st.markdown('<h3 style="margin-bottom:1rem">Ask about this meeting</h3>', unsafe_allow_html=True)
 
     if st.session_state.chat_history:
-        chat_html = '<div class="chat-container">'
         for msg in st.session_state.chat_history:
-            if msg["role"] == "user":
-                chat_html += f"""
-                <div class="chat-msg user-row">
-                    <div class="chat-label">You</div>
-                    <div class="chat-text">{msg['content']}</div>
-                </div>"""
-            else:
-                chat_html += f"""
-                <div class="chat-msg bot-row">
-                    <div class="chat-label">Assistant</div>
-                    <div class="chat-text">{msg['content']}</div>
-                </div>"""
-        chat_html += '</div>'
-        st.markdown(chat_html, unsafe_allow_html=True)
+            with st.chat_message("user" if msg["role"] == "user" else "assistant"):
+                st.markdown(msg["content"])
     else:
         st.markdown("""
         <div class="empty-state">
             Ask a question about the transcript — for example, "what were the main decisions made?"
         </div>""", unsafe_allow_html=True)
 
-    chat_col1, chat_col2 = st.columns([5, 1], gap="small")
-    with chat_col1:
-        user_input = st.text_input(
-            "Your question",
-            placeholder="What were the main decisions made?",
-            label_visibility="collapsed",
-        )
-    with chat_col2:
-        send_btn = st.button("Send", use_container_width=True)
+    with st.form("meeting_chat", clear_on_submit=True):
+        chat_col1, chat_col2 = st.columns([5, 1], gap="small")
+        with chat_col1:
+            user_input = st.text_input(
+                "Your question",
+                placeholder="What were the main decisions made?",
+                label_visibility="collapsed",
+            )
+        with chat_col2:
+            send_btn = st.form_submit_button("Send", type="primary", use_container_width=True)
 
     if send_btn and user_input.strip():
         with st.spinner("Thinking..."):

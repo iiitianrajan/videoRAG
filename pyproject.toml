@@ -1,17 +1,42 @@
 [project]
 name = "videorag"
 version = "0.1.0"
-description = "Add your description here"
+description = "Transcribe, summarize, and query meeting recordings"
 readme = "README.md"
 authors = [
     { name = "iiitianrajan", email = "iiitianrajan@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "chromadb>=0.5.0",
+    "langchain>=0.2.0",
+    "langchain-chroma>=0.1.0",
+    "langchain-community>=0.2.0",
+    "langchain-core>=0.2.0",
+    "langchain-huggingface>=0.0.3",
+    "langchain-mistralai>=0.1.0",
+    "langchain-text-splitters>=0.2.0",
+    "litellm>=1.0.0",
+    "mistralai>=0.4.0",
+    "openai-whisper>=20231117",
+    "pydub>=0.25.1",
+    "python-dotenv>=1.0.0",
+    "requests>=2.32.0",
+    "sentence-transformers>=3.0.0",
+    "streamlit>=1.35.0",
+    "torch>=2.2.0",
+    "torchaudio>=2.2.0",
+    "yt-dlp>=2024.4.9",
+]
 
 [project.scripts]
-videorag = "videorag:main"
+videorag = "videorag.cli:main"
 
 [build-system]
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = ["videorag", "core", "utils"]
+namespace = true

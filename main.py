@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from utils.audio_processor import process_input
+from utils.audio_processor import cleanup_audio_files, process_input
 from core.transcriber import transcribe_all
 from core.summarizer import summarize, generate_title
 from core.extractor import extract_action_items, extract_key_decisions, extract_questions
@@ -13,7 +13,10 @@ def run_pipeline(source :str, language :str = "english") -> dict:
 
     chunks = process_input(source)
 
-    transcript = transcribe_all(chunks,language)
+    try:
+        transcript = transcribe_all(chunks, language)
+    finally:
+        cleanup_audio_files(chunks)
     print(f"raw transcription (first 300 characters ) {transcript[:300]}")
 
     title = generate_title(transcript)
@@ -37,7 +40,7 @@ def run_pipeline(source :str, language :str = "english") -> dict:
         "rag_chain": rag_chain,
     }
 
-if __name__ == "__main__":
+def run_cli():
     # CLI entry point
     source = input("Enter YouTube URL or local file path: ").strip()
     language = input("Language (english/hinglish): ").strip() or "english"

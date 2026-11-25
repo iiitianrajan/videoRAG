@@ -8,7 +8,8 @@ from pydub import AudioSegment
 SARVAM_PIECE_SECONDS = 25
 
 
-WHISPER_MODEL = os.getenv("WHISPER_MODEL", "small")
+# Keep the historical misspelling working, but prefer the documented key.
+WHISPER_MODEL = os.getenv("WHISPER_MODEL", os.getenv("WISPER_MODEL", "small"))
 
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
@@ -120,4 +121,4 @@ def transcribe_all(chunks: list, language: str = "english") -> str:
 
     print("Transcription complete.")
 
-    return full_transcript.strip()  
+    return full_transcript.strip()
