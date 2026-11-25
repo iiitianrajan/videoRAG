@@ -196,7 +196,32 @@ https://www.youtube.com/watch?v=<any-talk-or-meeting-recording>
 - [ ] Downloadable Markdown / PDF report export
 - [ ] Parallel chunk transcription for long recordings
 - [ ] Persistent session history + multiple saved meetings
-- [ ] Docker deployment & CI/CD
+- [x] Docker deployment
+- [ ] CI/CD
+
+---
+
+## Docker Deployment
+
+Use Docker for reliable YouTube ingestion. The included image provides FFmpeg and Node 22, which yt-dlp needs for modern YouTube JavaScript challenges.
+
+Build the image:
+
+```powershell
+docker build -t videorag .
+```
+
+Run it with your local environment file:
+
+```powershell
+docker run --rm -p 8501:8501 --env-file .env videorag
+```
+
+Open `http://localhost:8501` when the container starts.
+
+For Render, Railway, Fly.io, or Google Cloud Run, deploy from the included `Dockerfile`, expose port `8501`, and configure provider keys as platform secrets. Do not commit or upload `.env`.
+
+`packages.txt` installs FFmpeg for Streamlit Community Cloud. That platform works for lightweight demonstrations, but the Docker deployment is recommended for reliable YouTube URLs because it includes the required Node runtime.
 
 ---
 

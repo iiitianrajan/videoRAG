@@ -26,17 +26,26 @@ dependencies = [
     "streamlit>=1.35.0",
     "torch>=2.2.0",
     "torchaudio>=2.2.0",
-    "yt-dlp>=2024.4.9",
+    "yt-dlp[default]>=2024.4.9",
 ]
 
 [project.scripts]
 videorag = "videorag.cli:main"
 
 [build-system]
-requires = ["uv_build>=0.12.9,<0.13.0"]
+requires = ["uv_build>=0.13.5,<0.14.0"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-root = ""
 module-name = ["videorag", "core", "utils"]
 namespace = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+torchaudio = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

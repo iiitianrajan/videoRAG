@@ -4,7 +4,7 @@
 audioop-lts>=0.2.1                # Restores `audioop`, removed from stdlib in Python 3.13+ (needed by pydub)
 
 # ── Audio / Video acquisition
-yt-dlp>=2024.4.9                  # Download audio from YouTube URLs
+yt-dlp[default]>=2024.4.9         # Download audio from YouTube URLs + EJS scripts
 pydub>=0.25.1                     # Audio file manipulation / format conversion
 ffmpeg-python>=0.2.0              # FFmpeg bindings (FFmpeg binary must be installed separately)
 

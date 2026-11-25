@@ -18,6 +18,9 @@ def download_youtube_audio(url: str, output_dir: Path) -> str:
         "format": "bestaudio/best",
         "outtmpl": output_path,
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "wav"}],
+        # YouTube uses JavaScript challenges for some media formats. Docker
+        # deployment provides Node 22, which yt-dlp uses through this setting.
+        "js_runtimes": {"node": {}},
         "quiet": True,
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
